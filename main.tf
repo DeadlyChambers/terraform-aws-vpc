@@ -7,16 +7,36 @@ locals {
   )
   nat_gateway_count = var.single_nat_gateway ? 1 : var.one_nat_gateway_per_az ? length(var.azs) : local.max_subnet_length
 
+<<<<<<< HEAD
   # Use `local.vpc_id` to give a hint to Terraform that subnets should be deleted before secondary CIDR blocks can be free!
   vpc_id = try(aws_vpc_ipv4_cidr_block_association.this[0].vpc_id, aws_vpc.this[0].id, "")
 
   create_vpc = var.create_vpc && var.putin_khuylo
+=======
+# Retrieve AWS credentials from env variables AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
+locals {
+  app = var.app
+  env = var.env
+  service = var.service
+  vpc_name = "${local.env}-${local.app}-${local.service}"
+  env_app = "${local.env}-${local.app}"
+  tags = merge({
+    "sc.app": local.app
+    "sc.env":local.env
+    "sc.service": local.service
+  },var.tags)
+}
+provider "aws" {
+  default_tags = local.tags
+  region = "${var.aws_region}"
+>>>>>>> 4936419 (VPC updates to make more reuseable)
 }
 
 ################################################################################
 # VPC
 ################################################################################
 
+<<<<<<< HEAD
 resource "aws_vpc" "this" {
   count = local.create_vpc ? 1 : 0
 
@@ -49,6 +69,17 @@ resource "aws_vpc_ipv4_cidr_block_association" "this" {
   vpc_id = aws_vpc.this[0].id
 
   cidr_block = element(var.secondary_cidr_blocks, count.index)
+=======
+resource "aws_vpc" "vpc" {
+  cidr_block = "${var.vpc_cidr}"
+  enable_dns_hostnames = true
+  tags = {Name =  local.vpc_name}
+}
+
+resource "aws_internet_gateway" "gw" {
+  vpc_id = "${aws_vpc.vpc.id}"
+  tags = {Name =  "${local.env_app}-ig"}
+>>>>>>> 4936419 (VPC updates to make more reuseable)
 }
 
 resource "aws_default_security_group" "this" {
@@ -56,6 +87,7 @@ resource "aws_default_security_group" "this" {
 
   vpc_id = aws_vpc.this[0].id
 
+<<<<<<< HEAD
   dynamic "ingress" {
     for_each = var.default_security_group_ingress
     content {
@@ -91,6 +123,78 @@ resource "aws_default_security_group" "this" {
     var.tags,
     var.default_security_group_tags,
   )
+=======
+  tags = tomap({Name =  format("%v-public-%v", local.vpc_name, var.aws_zones[count.index])})
+}
+
+############
+## Private Subnets
+############
+
+resource aws_eip nat {
+  count = "${var.private_subnets == "true" ? length(var.aws_zones) : 0}"
+  vpc      = true
+}
+
+resource aws_nat_gateway nat {
+  count = "${var.private_subnets == "true" ? length(var.aws_zones) : 0}"
+  allocation_id = "${element(aws_eip.nat.*.id, count.index)}"
+  subnet_id = "${element(aws_subnet.public_subnet.*.id, count.index)}"
+
+  tags = tomap({Name = format("%v-nat-%v", local.vpc_name, var.aws_zones[count.index])})
+
+  depends_on = [aws_eip.nat, aws_internet_gateway.gw, aws_subnet.public_subnet]
+}
+
+# Subnet (private)
+resource "aws_subnet" "private_subnet" {
+  count = "${var.private_subnets == "true" ? length(var.aws_zones) : 0}"
+  vpc_id = "${aws_vpc.vpc.id}"
+  cidr_block = "${cidrsubnet(var.vpc_cidr, 8, count.index + length(var.aws_zones))}"
+  availability_zone = "${var.aws_zones[count.index]}"
+  map_public_ip_on_launch = false
+
+  tags = tomap({Name = format("%v-private-%v", local.vpc_name, var.aws_zones[count.index])})
+}
+
+############
+## Routing (public subnets)
+############
+
+resource "aws_route_table" "route" {
+  vpc_id = "${aws_vpc.vpc.id}"
+
+  # Default route through Internet Gateway
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = "${aws_internet_gateway.gw.id}"
+  }
+
+  tags = tomap({Name = format("%v-public-route-table", local.vpc_name)})
+}
+
+resource "aws_route_table_association" "route" {
+  count = "${length(var.aws_zones)}"
+  subnet_id = "${element(aws_subnet.public_subnet.*.id, count.index)}"
+  route_table_id = "${aws_route_table.route.id}"
+}
+
+############
+## Routing (private subnets)
+############
+
+resource "aws_route_table" "private_route" {
+  count = "${var.private_subnets == "true" ? length(var.aws_zones) : 0}"
+  vpc_id = "${aws_vpc.vpc.id}"
+
+  # Default route through NAT
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = "${element(aws_nat_gateway.nat.*.id, count.index)}"
+  }
+
+  tags = tomap({Name = format("%v-private-route-table-%v", local.vpc_name, var.aws_zones[count.index])})
+>>>>>>> 4936419 (VPC updates to make more reuseable)
 }
 
 ################################################################################

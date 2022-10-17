@@ -1,4 +1,5 @@
 terraform {
+<<<<<<< HEAD
   required_version = ">= 0.13.1"
 
   required_providers {
@@ -8,3 +9,7 @@ terraform {
     }
   }
 }
+=======
+  required_version = ">= 1.3.2"
+}
+>>>>>>> 4936419 (VPC updates to make more reuseable)

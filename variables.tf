@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 variable "create_vpc" {
   description = "Controls if VPC should be created (it affects almost all resources)"
   type        = bool
@@ -14,6 +15,28 @@ variable "cidr" {
   description = "(Optional) The IPv4 CIDR block for the VPC. CIDR can be explicitly set or it can be derived from IPAM using `ipv4_netmask_length` & `ipv4_ipam_pool_id`"
   type        = string
   default     = "0.0.0.0/0"
+=======
+# Tags
+
+variable tags {
+    description = "Different tag values which should be assigned to AWS resources created via Terraform)"
+    type = map
+    default = {}
+}
+
+# AWS Regions / Zones
+
+variable aws_region {
+  type = string
+  description = "AWS region which should be used"
+  default = "us-east-1"
+}
+
+variable aws_zones {
+  type = list
+  description = "AWS AZs (Availability zones) where subnets should be created"
+  default = ["a","b","c"]
+>>>>>>> 4936419 (VPC updates to make more reuseable)
 }
 
 variable "enable_ipv6" {
@@ -22,6 +45,7 @@ variable "enable_ipv6" {
   default     = false
 }
 
+<<<<<<< HEAD
 variable "private_subnet_ipv6_prefixes" {
   description = "Assigns IPv6 private subnet id based on the Amazon provided /56 prefix base 10 integer (0-256). Must be of equal length to the corresponding IPv4 subnet list"
   type        = list(string)
@@ -1230,4 +1254,25 @@ variable "putin_khuylo" {
   description = "Do you agree that Putin doesn't respect Ukrainian sovereignty and territorial integrity? More info: https://en.wikipedia.org/wiki/Putin_khuylo!"
   type        = bool
   default     = true
+=======
+variable "app" {
+    type = string
+    default = "shaneschambers"
+
+}
+variable "env" {
+    type = string
+    default = "dev"
+}
+variable "service" {
+    type = string
+    default = "vpc"
+}
+# Network details (Change this only if you know what you are doing or if you think you are lucky)
+
+variable vpc_cidr {
+  type = string
+  description = "CIDR of the VPC"
+  default = "11.0.0.0/16"
+>>>>>>> 4936419 (VPC updates to make more reuseable)
 }
